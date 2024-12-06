@@ -1,6 +1,6 @@
 # KGL-Net
-我们建议在Ubuntu 22.04系统下运行，显卡为3090 cuda 11.8
-**Train**
-`python train_semseg.py`
-**Test**
-`python test_semseg.py`
+We recommend running it on the Ubuntu 22.04 system with a 3090 GPU and CUDA 11.8.
+**Train**<br>
+`python train_semseg.py`<br>
+**Test**<br>
+`python test_semseg.py`<br>
