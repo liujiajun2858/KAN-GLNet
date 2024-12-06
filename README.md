@@ -1,4 +1,4 @@
-# KGL-Net
+# KAN-GLNet
 We recommend running it on the Ubuntu 22.04 system with a 3090 GPU and CUDA 11.8.<br>
 **block**<br>
 The **block** contains GLFN feature modulation blocks, ContraNorm, and Reverse Bottleneck KAN Convolutions, with the Reverse Bottleneck KAN Convolutions located in the `fastkan.py` file.<br>
