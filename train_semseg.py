@@ -2,9 +2,7 @@
 import argparse
 import os
 from ptflops import get_model_complexity_info
-
 from data_utils.S3DISDataLoader import S3DISDataset
-
 import torch
 import datetime
 import logging
@@ -13,7 +11,6 @@ import sys
 import importlib
 import shutil
 from tqdm import tqdm
-
 import numpy as np
 import time
 
