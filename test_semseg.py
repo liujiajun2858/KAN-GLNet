@@ -1,7 +1,3 @@
-"""
-Author: Benny
-Date: Nov 2019
-"""
 import argparse
 import os
 from data_utils.S3DISDataLoader import ScannetDatasetWholeScene
@@ -25,7 +21,6 @@ seg_classes = class2label
 seg_label_to_cat = {}
 for i, cat in enumerate(seg_classes.keys()):
     seg_label_to_cat[i] = cat
-
 
 def parse_args():
     '''PARAMETERS'''
