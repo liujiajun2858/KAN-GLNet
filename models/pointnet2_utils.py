@@ -1,16 +1,10 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-
 from time import time
-
 import numpy as np
 from block.GLFN import GLFN
-
-from block.fastkan import *
-
-
-
+from block.rbkan import *
 
 def timeit(tag, t):
     print("{}: {}s".format(tag, time() - t))
@@ -212,28 +206,6 @@ class PointNetSetAbstraction(nn.Module):
         return new_xyz, new_points
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 class Konv(nn.Module):
     # Standard convolution
     def __init__(self, c1, c2, k=1):  # ch_in, ch_out, kernel, stride, padding, groups
@@ -247,11 +219,6 @@ class Konv(nn.Module):
 
     def fuseforward(self, x):
         return self.act(self.conv(x))
-
-
-
-########新增
-
 
 class Conv(nn.Module):
     # Standard convolution
@@ -286,41 +253,6 @@ class Conv(nn.Module):
         return self.act(self.conv(x))
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 class PointNetSetAbstractionAttention1(nn.Module):
     def  __init__(self, npoint: object, radius: object, nsample: object, in_channel: object, mlp: object,
                   group_all: object) -> object:
@@ -332,7 +264,7 @@ class PointNetSetAbstractionAttention1(nn.Module):
         self.mlp_conv1 = FastKANConv2DLayer(in_channel, mlp[0], kernel_size=3, padding=3 // 2)
 
 
-        self.mlp_attention = GLFN(mlp[0])  # 自己创新融合的
+        self.mlp_attention = GLFN(mlp[0]) 
 
         self.mlp_conv2 = Conv(mlp[0], mlp[1], 1)
         #self.mlp_conv2 = FastKANConv2DLayer(mlp[0], mlp[1],kernel_size=3,padding=3//2)
@@ -489,19 +421,6 @@ class PointNetFeaturePropagation1(nn.Module):
             new_points = F.relu(bn(conv(new_points)))
         return new_points
 
-
-
-
-
-
-
-
-
-
-
-
-#原始正确的！！！！
-
 class PointNetFeaturePropagation(nn.Module):
     def __init__(self, in_channel, mlp):
         super(PointNetFeaturePropagation, self).__init__()
@@ -513,8 +432,7 @@ class PointNetFeaturePropagation(nn.Module):
             self.mlp_convs.append(nn.Conv1d(last_channel, out_channel, 1))
             self.mlp_bns.append(nn.BatchNorm1d(out_channel))
             last_channel = out_channel
-        # 初始化 DySample 模块，假设 DySample 的参数与输入通道数相匹配
-        #self.dysample = DySample(in_channels=in_channel, scale=2, style='lp')
+
     def forward(self, xyz1, xyz2, points1, points2):
         """
         Input:
@@ -535,7 +453,7 @@ class PointNetFeaturePropagation(nn.Module):
         if S == 1:
             interpolated_points = points2.repeat(1, N, 1)
         else:
-            # #原来上采样开始
+
             dists = square_distance(xyz1, xyz2)
             dists, idx = dists.sort(dim=-1)
             dists, idx = dists[:, :, :3], idx[:, :, :3]  # [B, N, 3]
@@ -544,18 +462,6 @@ class PointNetFeaturePropagation(nn.Module):
             norm = torch.sum(dist_recip, dim=2, keepdim=True)
             weight = dist_recip / norm
             interpolated_points = torch.sum(index_points(points2, idx) * weight.view(B, N, 3, 1), dim=2)
-            #
-            # 使用 DySample 替换原有的插值过程
-            # device = points2.device
-            # points2_expanded = points2.unsqueeze(-1).to(device)
-            # points2_swapped = points2_expanded.permute(0,2,1,3).to(device)
-            # block = DySample(points2_swapped.shape[1]).to(device)
-            # input = points2_swapped.to(device)
-            # output = block(input).to(device)
-            # output_squeezed =output[:, :, :, 0].to(device)
-            # interpolated_points=output_squeezed.permute(0, 2, 1).to(device)
-
-
 
         if points1 is not None:
             points1 = points1.permute(0, 2, 1)
