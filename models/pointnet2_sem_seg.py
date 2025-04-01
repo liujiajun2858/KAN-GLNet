@@ -6,7 +6,6 @@ from models.pointnet2_utils import *
 from models.pointnet2_utils import PointNetSetAbstractionMsg, PointNetFeaturePropagation, \
     PointNetSetAbstractionMsgAttention
 
-
 from block.normal import ContraNorm
 
 class get_model(nn.Module):
