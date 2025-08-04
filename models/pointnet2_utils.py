@@ -369,7 +369,6 @@ class Conv(nn.Module):
 
 
 
-#PointNet Set Abstraction with SDM 及glsa注意力+滤波
 
 class PointNetSetAbstractionAttention1(nn.Module):
     def  __init__(self, npoint: object, radius: object, nsample: object, in_channel: object, mlp: object,
@@ -383,37 +382,16 @@ class PointNetSetAbstractionAttention1(nn.Module):
 
         #self.mlp_attention = FMB_GLSA(in_channel)
         #self.mlp_conv1 = Conv(in_channel, mlp[0], 1)
-
         self.mlp_conv1 = FastKANConv2DLayer(in_channel, mlp[0], kernel_size=3, padding=3 // 2)
         #self.mlp_conv1 = KANConv2DLayer(in_channel, mlp[0], kernel_size=3, padding=3 // 2)#测试新kan
-
-
         #self.mlp_conv1 = KANConv2DLayer(in_channel, mlp[0], kernel_size=3, padding=3 // 2)
-
-
-
-
-
         #self.mlp_conv1 = KALNConv2DLayer(in_channel, mlp[0], kernel_size=3, padding=3 // 2)
-
-        # 插入SDM模块
-        #self.sdm = SDM(in_channel, in_channel)
-
-
-        # 注意力机制
-        #self.mlp_attention = GLSA(mlp[0])
         self.mlp_attention = FMB_GLSA(mlp[0])  # 自己创新融合的
-        #门控
-        #self.lgag=LGAG(mlp[0],mlp[0],mlp[0]//2)
-        # 插入 CGAFusion 模块
-        #self.cga_fusion = CGAFusion(dim=mlp[0])
         self.mlp_conv2 = Conv(mlp[0], mlp[1], 1)
         #self.mlp_conv2 = FastKANConv2DLayer(mlp[0], mlp[1],kernel_size=3,padding=3//2)
-
         self.mlp_conv3 = Conv(mlp[1], mlp[2], 1)
         #self.mlp_conv3 = FastKANConv2DLayer(mlp[1], mlp[2],kernel_size=3,padding=3//2)
         self.group_all = group_all
-
     def forward(self, xyz, points):
         xyz = xyz.permute(0, 2, 1)
         if points is not None:
