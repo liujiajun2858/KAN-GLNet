@@ -1,6 +1,7 @@
 import argparse
 import os
 from data_utils.S3DISDataLoader import ScannetDatasetWholeScene
+#from data_utils.change import  ScannetDatasetWholeScene
 from data_utils.indoor3d_util import g_label2color
 import torch
 import logging
@@ -8,30 +9,31 @@ from pathlib import Path
 import sys
 import importlib
 from tqdm import tqdm
-
+import provider
 import numpy as np
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 ROOT_DIR = BASE_DIR
 sys.path.append(os.path.join(ROOT_DIR, 'models'))
 
-classes = ['Steam','Silique']
+classes = ['茎杆','果荚']
 class2label = {cls: i for i, cls in enumerate(classes)}
 seg_classes = class2label
 seg_label_to_cat = {}
 for i, cat in enumerate(seg_classes.keys()):
     seg_label_to_cat[i] = cat
 
+
 def parse_args():
     '''PARAMETERS'''
     parser = argparse.ArgumentParser('Model')
-    parser.add_argument('--batch_size', type=int, default=8, help='batch size in testing [default: 32]')
+    parser.add_argument('--batch_size', type=int, default=8, help='batch size in testing [default: 32]')#选择4效果也挺好
     parser.add_argument('--gpu', type=str, default='0', help='specify gpu device')
     parser.add_argument('--num_point', type=int, default=4096, help='point number [default: 4096]')
     parser.add_argument('--log_dir', type=str, default='pointnet2_sem_seg', help='Log path [default: None]')
     parser.add_argument('--visual', action='store_true', default=True, help='visualize result [default: False]')
-    parser.add_argument('--test_area', type=int, default=5, help='area for testing, option: 1-6 [default: 5]')
-    parser.add_argument('--num_votes', type=int, default=3, help='aggregate segmentation scores with voting [default: 5]')
+    parser.add_argument('--test_area', type=int, default=3, help='area for testing, option: 1-6 [default: 5]')
+    parser.add_argument('--num_votes', type=int, default=20, help='aggregate segmentation scores with voting [default: 5]')
     return parser.parse_args()
 
 
@@ -62,7 +64,7 @@ def main(args):
     logger = logging.getLogger("Model")
     logger.setLevel(logging.INFO)
     formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-    file_handler = logging.FileHandler('%s/eval.txt' % experiment_dir)
+    file_handler = logging.FileHandler('%s/test.txt' % experiment_dir)
     file_handler.setLevel(logging.INFO)
     file_handler.setFormatter(formatter)
     logger.addHandler(file_handler)
@@ -73,16 +75,13 @@ def main(args):
     BATCH_SIZE = args.batch_size
     NUM_POINT = args.num_point
 
-    root = 'data/stanford_indoor3d/'
+    root = 'data/10/'  #5是组会展示的
 
     TEST_DATASET_WHOLE_SCENE = ScannetDatasetWholeScene(root, split='test', test_area=args.test_area, block_points=NUM_POINT)
     log_string("The number of test data is: %d" % len(TEST_DATASET_WHOLE_SCENE))
 
     '''MODEL LOADING'''
-    model_name = os.listdir(experiment_dir + '/checkpoints')[0].split('.')[0]
-    print(f"experiment name!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!: '{experiment_dir}'")
-    print(f"Model name!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!: '{model_name}'")
-
+    model_name = os.listdir(experiment_dir + '/logs')[0].split('.')[0]
     MODEL = importlib.import_module(model_name)
     classifier = MODEL.get_model(NUM_CLASSES).cuda()
     checkpoint = torch.load(str(experiment_dir) + '/checkpoints/best_model.pth')
@@ -98,16 +97,16 @@ def main(args):
         total_correct_class = [0 for _ in range(NUM_CLASSES)]
         total_iou_deno_class = [0 for _ in range(NUM_CLASSES)]
 
-        log_string('---- EVALUATION WHOLE SCENE----')
+        log_string('---- TEST WHOLE SCENE----')
 
         for batch_idx in range(num_batches):
             print("Inference [%d/%d] %s ..." % (batch_idx + 1, num_batches, scene_id[batch_idx]))
             total_seen_class_tmp = [0 for _ in range(NUM_CLASSES)]
             total_correct_class_tmp = [0 for _ in range(NUM_CLASSES)]
             total_iou_deno_class_tmp = [0 for _ in range(NUM_CLASSES)]
-            if args.visual:
-                fout = open(os.path.join(visual_dir, scene_id[batch_idx] + '_pred.obj'), 'w')
-                fout_gt = open(os.path.join(visual_dir, scene_id[batch_idx] + '_gt.obj'), 'w')
+            if args.visual:   #改了这
+                fout = open(os.path.join(visual_dir, scene_id[batch_idx] + '_pred.ply'), 'w')
+                fout_gt = open(os.path.join(visual_dir, scene_id[batch_idx] + '_gt.ply'), 'w')
 
             whole_scene_data = TEST_DATASET_WHOLE_SCENE.scene_points_list[batch_idx]
             whole_scene_label = TEST_DATASET_WHOLE_SCENE.semantic_labels_list[batch_idx]
@@ -166,7 +165,9 @@ def main(args):
                 pl_save.close()
             for i in range(whole_scene_label.shape[0]):
                 color = g_label2color[pred_label[i]]
-                color_gt = g_label2color[whole_scene_label[i]]
+                #color_gt = g_label2color[whole_scene_label[i]]
+                # 在访问 g_label2color 前，确保标签是整数
+                color_gt = g_label2color[int(whole_scene_label[i])]  # 直接截断或四舍五入
                 if args.visual:
                     fout.write('v %f %f %f %d %d %d\n' % (
                         whole_scene_data[i, 0], whole_scene_data[i, 1], whole_scene_data[i, 2], color[0], color[1],
@@ -179,17 +180,17 @@ def main(args):
                 fout.close()
                 fout_gt.close()
 
-        IoU = np.array(total_correct_class) / (np.array(total_iou_deno_class, dtype=np.float64) + 1e-6)
+        IoU = np.array(total_correct_class) / (np.array(total_iou_deno_class, dtype=np.float32) + 1e-6)
         iou_per_class_str = '------- IoU --------\n'
         for l in range(NUM_CLASSES):
             iou_per_class_str += 'class %s, IoU: %.3f \n' % (
                 seg_label_to_cat[l] + ' ' * (14 - len(seg_label_to_cat[l])),
                 total_correct_class[l] / float(total_iou_deno_class[l]))
         log_string(iou_per_class_str)
-        log_string('eval point avg class IoU: %f' % np.mean(IoU))
-        log_string('eval whole scene point avg class acc: %f' % (
-            np.mean(np.array(total_correct_class) / (np.array(total_seen_class, dtype=np.float64) + 1e-6))))
-        log_string('eval whole scene point accuracy: %f' % (
+        log_string('test point avg class IoU: %f' % np.mean(IoU))
+        log_string('test whole scene point avg class acc: %f' % (
+            np.mean(np.array(total_correct_class) / (np.array(total_seen_class, dtype=np.float32) + 1e-6))))
+        log_string('test whole scene point accuracy: %f' % (
                 np.sum(total_correct_class) / float(np.sum(total_seen_class) + 1e-6)))
 
         print("Done!")
@@ -198,4 +199,9 @@ def main(args):
 if __name__ == '__main__':
     args = parse_args()
     main(args)
+
+
+
+
+
 
