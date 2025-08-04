@@ -7,7 +7,7 @@ The corresponding rapeseed point cloud dataset can be obtained at the following 
 **log**<br>
 The **log** file will generate the corresponding results and weight information. For visualizing the results, it is recommended to use software such as CloudCompare or MeshLab.<br>
 **Train**<br>
-`python train_semseg.py`<br>
+`python train.py`<br>
 **Test**<br>
 `python test_semseg.py`<br>
 **Log**<br>
