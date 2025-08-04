@@ -1,6 +1,6 @@
 import argparse
 import os
-from data_utils.S3DISDataLoader import ScannetDatasetWholeScene
+from data_utils.S3DISDataLoader_val import ScannetDatasetWholeScene
 #from data_utils.change import  ScannetDatasetWholeScene
 from data_utils.indoor3d_util import g_label2color
 import torch
