@@ -1,10 +1,57 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from block.normal import ContraNorm
+from block import KAGN
 from time import time
+from block.SDM import SDM
 import numpy as np
-from block.GLFN import GLFN
-from block.rbkan import *
+from block.GLSA import GLSA
+from block.DMlp import FMB
+from block.A2Attention import DoubleAttention
+from block.CBAM import CBAM
+from block.CPCA import CPCA
+from block.Coordatt import CoordAtt
+from block.EMA import EMA
+from block.EfficientAttention import EfficientAttention
+from block.GAM import GAMAttention
+from block.LSKBlock import LSKBlock
+from block.MHSA import MHSA
+from block.MLCA import MLCA
+from block.MPCA import MPCA
+from block.NAMAattention import NAMAttention
+from block.RCSOSA import RCSOSA
+from block.RepLKNet import RepLKBlock, ReparamLargeKernelConv
+from block.SEAttention import SEAttention
+from block.SENET_ATTENTION import SegNext_Attention
+from block.ShuffleAttention import ShuffleAttention
+from block.Simattention import SimAM
+from block.SpatiaGroupEnhance import SpatialGroupEnhance
+from block.TripletAttention import TripletAttention
+from block.Unireplknet import UniRepLKNetBlock, DilatedReparamBlock
+from block.activations import *
+from block.biformer import BiLevelRoutingAttention
+from block.blocks import MSBlock, iRMB
+from block.conv import PConv, ODConv2d, DEConv, ScConv, RFAConv, AKConv, DualConv
+from block.deformer_LKA import deformable_LKA
+from block.orepa import OREPA
+from block.rep_block import DiverseBranchBlock
+from block.repvgg import RepVGG
+from block.fastkan import *
+from block.kan import *
+from block.PNP import PnP3D
+from block.ronghe import FMB_GLSA
+from block.dysamply import DySample
+#from block.ISL import ISL,knn
+from block.DynamicFilter import DynamicFilter
+from block.fastkan import FastKANConv2DLayer
+
+from block.CloMSFM import CloMSFM
+from block.CGAFusion import CGAFusion
+from block.LGAG import LGAG
+from block.CoorGate import CoordGate
+from block.ESAM import ESAM
+
 
 def timeit(tag, t):
     print("{}: {}s".format(tag, time() - t))
@@ -86,6 +133,8 @@ def farthest_point_sample(xyz, npoint):
     return centroids
 
 
+
+#官方原代码
 def query_ball_point(radius, nsample, xyz, new_xyz):
     """
     Input:
@@ -109,6 +158,11 @@ def query_ball_point(radius, nsample, xyz, new_xyz):
     return group_idx
 
 
+
+
+
+
+#官方原来
 def sample_and_group(npoint, radius, nsample, xyz, points, returnfps=False):
     """
     Input:
@@ -138,6 +192,8 @@ def sample_and_group(npoint, radius, nsample, xyz, points, returnfps=False):
         return new_xyz, new_points, grouped_xyz, fps_idx
     else:
         return new_xyz, new_points
+
+
 
 
 def sample_and_group_all(xyz, points):
@@ -206,6 +262,28 @@ class PointNetSetAbstraction(nn.Module):
         return new_xyz, new_points
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 class Konv(nn.Module):
     # Standard convolution
     def __init__(self, c1, c2, k=1):  # ch_in, ch_out, kernel, stride, padding, groups
@@ -219,6 +297,11 @@ class Konv(nn.Module):
 
     def fuseforward(self, x):
         return self.act(self.conv(x))
+
+
+
+########新增
+
 
 class Conv(nn.Module):
     # Standard convolution
@@ -253,6 +336,41 @@ class Conv(nn.Module):
         return self.act(self.conv(x))
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#PointNet Set Abstraction with SDM 及glsa注意力+滤波
+
 class PointNetSetAbstractionAttention1(nn.Module):
     def  __init__(self, npoint: object, radius: object, nsample: object, in_channel: object, mlp: object,
                   group_all: object) -> object:
@@ -260,12 +378,35 @@ class PointNetSetAbstractionAttention1(nn.Module):
         self.npoint = npoint
         self.radius = radius
         self.nsample = nsample
+
+
+
+        #self.mlp_attention = FMB_GLSA(in_channel)
         #self.mlp_conv1 = Conv(in_channel, mlp[0], 1)
+
         self.mlp_conv1 = FastKANConv2DLayer(in_channel, mlp[0], kernel_size=3, padding=3 // 2)
+        #self.mlp_conv1 = KANConv2DLayer(in_channel, mlp[0], kernel_size=3, padding=3 // 2)#测试新kan
 
 
-        self.mlp_attention = GLFN(mlp[0]) 
+        #self.mlp_conv1 = KANConv2DLayer(in_channel, mlp[0], kernel_size=3, padding=3 // 2)
 
+
+
+
+
+        #self.mlp_conv1 = KALNConv2DLayer(in_channel, mlp[0], kernel_size=3, padding=3 // 2)
+
+        # 插入SDM模块
+        #self.sdm = SDM(in_channel, in_channel)
+
+
+        # 注意力机制
+        #self.mlp_attention = GLSA(mlp[0])
+        self.mlp_attention = FMB_GLSA(mlp[0])  # 自己创新融合的
+        #门控
+        #self.lgag=LGAG(mlp[0],mlp[0],mlp[0]//2)
+        # 插入 CGAFusion 模块
+        #self.cga_fusion = CGAFusion(dim=mlp[0])
         self.mlp_conv2 = Conv(mlp[0], mlp[1], 1)
         #self.mlp_conv2 = FastKANConv2DLayer(mlp[0], mlp[1],kernel_size=3,padding=3//2)
 
@@ -277,20 +418,23 @@ class PointNetSetAbstractionAttention1(nn.Module):
         xyz = xyz.permute(0, 2, 1)
         if points is not None:
             points = points.permute(0, 2, 1)
+#sample_and_group
         if self.group_all:
-            new_xyz, new_points = sample_and_group(xyz, points)
+            new_xyz, new_points = sample_and_group_all(xyz, points)
         else:
-            new_xyz, new_points = sample_and_group(self.npoint, self.radius, self.nsample, xyz, points)
+            new_xyz, new_points = sample_and_group(self.npoint, self.radius, self.nsample, xyz, points)#原来使用球查询
+            # # 使用修改后的sample_and_group，不再需要radius参数
+            # new_xyz, new_points = sample_and_group(self.npoint, self.nsample, xyz, points)
         new_points = new_points.permute(0, 3, 2, 1)
+
         new_points = self.mlp_conv1(new_points)
         new_points = self.mlp_conv2(new_points)
         new_points = self.mlp_conv3(new_points)
-        new_points = torch.max(new_points, 2)[0]
+        # print(new_points.shape)
+        new_points = torch.max(new_points, 2)[0]  #最大池化，四维降为了三维
+        # print(new_points.shape)
         new_xyz = new_xyz.permute(0, 2, 1)
         return new_xyz, new_points
-
-
-
 
 
 
@@ -373,54 +517,6 @@ class PointNetSetAbstractionMsg(nn.Module):
         new_points_concat = torch.cat(new_points_list, dim=1)
         return new_xyz, new_points_concat
 
-########
-
-
-
-class PointNetFeaturePropagation1(nn.Module):
-    def __init__(self, in_channel, mlp, isl_out_channels=[128, 64]):
-        super(PointNetFeaturePropagation1, self).__init__()
-        self.mlp_convs = nn.ModuleList()
-        self.mlp_bns = nn.ModuleList()
-        last_channel = in_channel
-        for out_channel in mlp:
-            self.mlp_convs.append(nn.Conv1d(last_channel, out_channel, 1))
-            self.mlp_bns.append(nn.BatchNorm1d(out_channel))
-            last_channel = out_channel
-
-        # ISL module initialization
-        self.isl = ISL(in_channel, isl_out_channels)
-
-    def forward(self, xyz1, xyz2, points1, points2):
-        xyz1 = xyz1.permute(0, 2, 1)
-        xyz2 = xyz2.permute(0, 2, 1)
-        points2 = points2.permute(0, 2, 1)
-        B, N, C = xyz1.shape
-        _, S, _ = xyz2.shape
-        if S == 1:
-            interpolated_points = points2.repeat(1, N, 1)
-        else:
-            dists = square_distance(xyz1, xyz2)
-            dists, idx = dists.sort(dim=-1)
-            dists, idx = dists[:, :, :3], idx[:, :, :3]  # [B, N, 3]
-            dist_recip = 1.0 / (dists + 1e-8)
-            norm = torch.sum(dist_recip, dim=2, keepdim=True)
-            weight = dist_recip / norm
-            interpolated_points = torch.sum(index_points(points2, idx) * weight.view(B, N, 3, 1), dim=2)
-        if points1 is not None:
-            points1 = points1.permute(0, 2, 1)
-            new_points = torch.cat([points1, interpolated_points], dim=-1)
-        else:
-            new_points = interpolated_points
-        new_points = new_points.permute(0, 2, 1)
-        # Add ISL layer before the final MLPs
-        idx_ = knn(new_points, k=self.isl.k)
-        new_points = self.isl(new_points, idx_)
-        for i, conv in enumerate(self.mlp_convs):
-            bn = self.mlp_bns[i]
-            new_points = F.relu(bn(conv(new_points)))
-        return new_points
-
 class PointNetFeaturePropagation(nn.Module):
     def __init__(self, in_channel, mlp):
         super(PointNetFeaturePropagation, self).__init__()
@@ -432,7 +528,8 @@ class PointNetFeaturePropagation(nn.Module):
             self.mlp_convs.append(nn.Conv1d(last_channel, out_channel, 1))
             self.mlp_bns.append(nn.BatchNorm1d(out_channel))
             last_channel = out_channel
-
+        # 初始化 DySample 模块，假设 DySample 的参数与输入通道数相匹配
+        #self.dysample = DySample(in_channels=in_channel, scale=2, style='lp')
     def forward(self, xyz1, xyz2, points1, points2):
         """
         Input:
@@ -453,7 +550,7 @@ class PointNetFeaturePropagation(nn.Module):
         if S == 1:
             interpolated_points = points2.repeat(1, N, 1)
         else:
-
+            # #原来上采样开始
             dists = square_distance(xyz1, xyz2)
             dists, idx = dists.sort(dim=-1)
             dists, idx = dists[:, :, :3], idx[:, :, :3]  # [B, N, 3]
@@ -462,6 +559,8 @@ class PointNetFeaturePropagation(nn.Module):
             norm = torch.sum(dist_recip, dim=2, keepdim=True)
             weight = dist_recip / norm
             interpolated_points = torch.sum(index_points(points2, idx) * weight.view(B, N, 3, 1), dim=2)
+            #
+
 
         if points1 is not None:
             points1 = points1.permute(0, 2, 1)
@@ -480,3 +579,23 @@ class PointNetFeaturePropagation(nn.Module):
             new_points = F.relu(bn(conv(new_points)))
         return new_points
 
+#knn球查询
+def knn_point(nsample, xyz, new_xyz):
+    """
+    Robust K-Nearest Neighbors query with min point guarantee
+    Input:
+        nsample: target number of neighbors
+        xyz: all points, [B, N, 3]
+        new_xyz: query points, [B, S, 3]
+    Return:
+        group_idx: grouped points index, [B, S, nsample]
+    """
+    sqrdists = square_distance(new_xyz, xyz)
+    _, group_idx = torch.topk(sqrdists, nsample, dim=-1, largest=False, sorted=False)
+
+    # 确保至少有2个点（避免InstanceNorm错误）
+    if nsample == 1:
+        # 复制点使至少有两个点
+        group_idx = group_idx.repeat(1, 1, 2)
+
+    return group_idx
