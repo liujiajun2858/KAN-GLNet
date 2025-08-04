@@ -10,5 +10,7 @@ The **log** file will generate the corresponding results and weight information.
 `python train_semseg.py`<br>
 **Test**<br>
 `python test_semseg.py`<br>
+**Log**<br>
+The complete model weights along with training and testing printouts are saved in the log folder.
 **This code repository will be continuously improved and updated.**
 
