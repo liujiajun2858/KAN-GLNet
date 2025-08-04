@@ -9,6 +9,6 @@ The corresponding rapeseed point cloud dataset can be obtained at the following 
 **Test**<br>
 `python test_semseg.py`<br>
 **Log**<br>
-The complete model weights along with training and testing printouts are saved in the log folder. Additional information can be obtained at the following link: (https://pan.baidu.com/s/1j6EzeyflBjbOCfjotgDiwQ?pwd=4gd2). **<br>**
+The complete model weights along with training and testing printouts are saved in the log folder. Additional information can be obtained at the following link: (https://pan.baidu.com/s/1j6EzeyflBjbOCfjotgDiwQ?pwd=4gd2). <br>
 **This code repository will be continuously improved and updated.**
 
